@@ -1,0 +1,10 @@
+{
+    "name": "vendor/ai-website-assistant",
+    "description": "AI Website Assistant",
+    "type": "wordpress-plugin",
+    "require": {
+        "guzzlehttp/guzzle": "^7.8",
+        "symfony/dom-crawler": "^7.0",
+        "symfony/css-selector": "^7.0"
+    }
+}
