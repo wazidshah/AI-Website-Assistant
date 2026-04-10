@@ -387,7 +387,33 @@
     footer a:hover { color: var(--text-muted); }
     .footer-links { display: flex; gap: 24px; }
 
-    /* ── ANIMATIONS ── */
+    /* ── FEEDBACK BANNER ── */
+    .feedback-section { padding: 40px 5% 0; }
+    .feedback-banner {
+      max-width: 780px; margin: 0 auto;
+      background: rgba(251,146,60,0.08);
+      border: 1px solid rgba(251,146,60,0.25);
+      border-radius: 16px;
+      padding: 28px 36px;
+      display: flex; align-items: center; justify-content: space-between;
+      gap: 24px; flex-wrap: wrap;
+    }
+    .feedback-banner-text { flex: 1; min-width: 220px; }
+    .feedback-banner-text strong { display: block; font-size: 1rem; font-weight: 700; margin-bottom: 4px; color: var(--text); }
+    .feedback-banner-text span { font-size: 0.88rem; color: var(--text-muted); }
+    .btn-feedback {
+      background: rgba(251,146,60,0.15);
+      border: 1px solid rgba(251,146,60,0.4);
+      color: #fb923c;
+      padding: 10px 22px; border-radius: 10px;
+      font-weight: 600; font-size: 0.9rem;
+      text-decoration: none; white-space: nowrap;
+      transition: background .2s, transform .2s;
+      display: inline-flex; align-items: center; gap: 8px;
+    }
+    .btn-feedback:hover { background: rgba(251,146,60,0.25); transform: translateY(-1px); }
+
+
     @keyframes fadeInUp {
       from { opacity: 0; transform: translateY(20px); }
       to   { opacity: 1; transform: translateY(0); }
@@ -427,6 +453,7 @@
       <a href="#features">Features</a>
       <a href="#install">Installation</a>
       <a href="#faq">FAQ</a>
+      <a href="https://forms.gle/6Www1hpkNGSMngR1A" target="_blank" rel="noopener" style="color:#fb923c;">Share Feedback</a>
     </div>
     <a href="https://github.com/wazidshah/AI-Website-Assistant" class="btn btn-primary" target="_blank" rel="noopener">
       Download Free on GitHub →
@@ -435,7 +462,7 @@
 
   <!-- HERO -->
   <section class="hero">
-    <div class="badge">✦ Powered by Google Gemini · Free &amp; Open Source on GitHub</div>
+    <div class="badge">✦ Free &amp; Open Source on GitHub</div>
     <h1>
       Your website,<br/>
       <span class="gradient">now with AI support</span>
@@ -539,16 +566,6 @@
         <div class="feature-icon" style="background:rgba(99,102,241,0.15);">🔒</div>
         <h3>Privacy Friendly</h3>
         <p>Visitor questions are never stored in your database. Only your website content chunks live locally.</p>
-      </div>
-      <div class="feature reveal">
-        <div class="feature-icon" style="background:rgba(34,211,160,0.12);">🛒</div>
-        <h3>WooCommerce Ready</h3>
-        <p>Optionally index product pages so customers can ask about pricing, specs, and stock without leaving the shop.</p>
-      </div>
-      <div class="feature reveal">
-        <div class="feature-icon" style="background:rgba(251,146,60,0.12);">🔧</div>
-        <h3>ACF Support</h3>
-        <p>Indexes Advanced Custom Fields — including repeaters and flexible content — so custom data is never missed.</p>
       </div>
       <div class="feature reveal">
         <div class="feature-icon" style="background:rgba(99,102,241,0.15);">👑</div>
@@ -689,6 +706,19 @@
     </div>
   </section>
 
+  <!-- FEEDBACK -->
+  <section class="feedback-section">
+    <div class="feedback-banner reveal">
+      <div class="feedback-banner-text">
+        <strong>💬 Share your feedback</strong>
+        <span>This is an early release — your thoughts help shape what comes next. Takes less than 2 minutes.</span>
+      </div>
+      <a href="https://forms.gle/6Www1hpkNGSMngR1A" class="btn-feedback" target="_blank" rel="noopener">
+        ✍ Fill out the form →
+      </a>
+    </div>
+  </section>
+
   <!-- CTA -->
   <section class="cta-section">
     <div class="cta-card reveal">
@@ -716,6 +746,7 @@
       <a href="https://github.com/wazidshah/AI-Website-Assistant" target="_blank" rel="noopener">GitHub</a>
       <a href="https://github.com/wazidshah/AI-Website-Assistant/releases" target="_blank" rel="noopener">Releases</a>
       <a href="https://aistudio.google.com/app/apikey" target="_blank" rel="noopener">Get API Key</a>
+      <a href="https://forms.gle/6Www1hpkNGSMngR1A" target="_blank" rel="noopener" style="color:#fb923c;">Feedback</a>
     </div>
   </footer>
 
