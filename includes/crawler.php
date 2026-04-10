@@ -20,13 +20,22 @@ use Symfony\Component\DomCrawler\Crawler as DomCrawler;
  * @return Client
  */
 function ai_assistant_get_guzzle_client() {
+	// Only disable SSL verification on local/debug environments.
+	$site_url = home_url();
+	$is_local = ( defined( 'WP_DEBUG' ) && WP_DEBUG )
+		&& (
+			false !== strpos( $site_url, 'localhost' )
+			|| false !== strpos( $site_url, '127.0.0.1' )
+			|| false !== strpos( $site_url, '.local' )
+		);
+
 	return new Client(array(
 		'timeout'         => 10.0,
 		'allow_redirects' => array( 'max' => 5 ),
 		'headers'         => array(
-			'User-Agent' => 'AI Website Assistant Bot',
+			'User-Agent' => 'AI Website Assistant Bot/1.0',
 		),
-		'verify'          => false, // Useful for local dev.
+		'verify'          => ! $is_local,
 	));
 }
 
@@ -206,49 +215,75 @@ function ai_assistant_fetch_and_parse_url( $url ) {
 		return array( 'error' => 'Received empty HTML.' );
 	}
 
-	$crawler = new DomCrawler( $html );
+	$page_crawler = new DomCrawler( $html );
 
-	// Remove noise tags from the DOM entirely.
-	$crawler->filter( 'script, style, noscript, nav, svg, iframe' )->each(function ( DomCrawler $node ) {
-		$node->getNode(0)->parentNode->removeChild( $node->getNode(0) );
-	});
-
-	// Get Title
+	// ── Extract page title ────────────────────────────────────────────────────
 	$title = '';
-	if ( $crawler->filter('title')->count() > 0 ) {
-		$title = trim( $crawler->filter('title')->text() );
+	if ( $page_crawler->filter( 'title' )->count() > 0 ) {
+		$title = trim( $page_crawler->filter( 'title' )->text() );
 	}
 
-	// Get Main Content
-	$main_text = '';
-	$main_selectors = array( 'main', 'article', '#content', '.content', '.site-main', '.elementor-inner' );
-	$main_found = false;
-	
-	foreach ( $main_selectors as $selector ) {
-		if ( $crawler->filter( $selector )->count() > 0 ) {
-			$main_text = $crawler->filter( $selector )->text();
-			$main_found = true;
-			break; // Found the primary container.
+	// ── Step 1: Strip noise blocks from raw HTML ──────────────────────────────
+	// Remove scripts, styles, and non-content structural elements so they don't
+	// pollute the chunks. We strip nav/header/footer/aside here since they
+	// contain menus, ads, and boilerplate that hurt retrieval accuracy.
+	$body_html = preg_replace(
+		'@<(script|style|noscript|svg|iframe|nav|header|footer|aside)[^>]*?>.*?</\1>@si',
+		' ',
+		$html
+	);
+
+	// ── Step 2: Find the best semantic content container ─────────────────────
+	// Try progressively broader selectors. Stop at the first one with real text.
+	$content_crawler   = new DomCrawler( $body_html );
+	$main_text         = '';
+	$content_selectors = array(
+		'main',
+		'article',
+		'.entry-content',
+		'.post-content',
+		'.page-content',
+		'.wp-block-post-content',
+		'#content',
+		'#main',
+		'.content-area',
+		'body',
+	);
+
+	foreach ( $content_selectors as $selector ) {
+		try {
+			$node = $content_crawler->filter( $selector );
+			if ( $node->count() > 0 ) {
+				$inner = $node->first()->html();
+				// Inject spaces around block-level elements before stripping tags.
+				$inner     = preg_replace( '/(<(?:p|div|li|br|tr|td|th|h[1-6]|section|article)[^>]*>)/i', ' $1', $inner );
+				$inner     = preg_replace( '/(<\/(?:p|div|li|br|tr|td|th|h[1-6]|section|article)>)/i', '$1 ', $inner );
+				$candidate = trim( wp_strip_all_tags( $inner ) );
+				if ( mb_strlen( $candidate ) > 100 ) {
+					$main_text = $candidate;
+					break;
+				}
+			}
+		} catch ( \Exception $e ) {
+			// Selector may not exist on this page – keep trying.
+			continue;
 		}
 	}
 
-	if ( ! $main_found ) {
-		// Fallback to body text if no main container found.
-		if ( $crawler->filter('body')->count() > 0 ) {
-			$main_text = $crawler->filter('body')->text();
-		}
+	// ── Step 3: Full-body fallback ────────────────────────────────────────────
+	if ( empty( $main_text ) ) {
+		$fallback  = preg_replace( '/(<(?:p|div|li|br|tr|td|th|h[1-6])[^>]*>)/i', ' $1', $body_html );
+		$fallback  = preg_replace( '/(<\/(?:p|div|li|br|tr|td|th|h[1-6])>)/i', '$1 ', $fallback );
+		$main_text = trim( wp_strip_all_tags( $fallback ) );
 	}
 
-	// Get Footer Content
-	$footer_text = '';
-	if ( $crawler->filter('footer, .site-footer, #colophon')->count() > 0 ) {
-		$footer_text = $crawler->filter('footer, .site-footer, #colophon')->first()->text();
-	}
-
-	// Combine and clean up white space.
-	$final_content = "Title: {$title}\nURL: {$url}\n\nMain Content:\n" . trim( $main_text ) . "\n\nFooter Content:\n" . trim( $footer_text );
-	$final_content = preg_replace( '/[ \t]+/', ' ', $final_content ); // Replace multiple spaces/tabs
-	$final_content = preg_replace( '/\n{3,}/', "\n\n", $final_content ); // Replace lots of newlines with double newline
+	// ── Step 4: Clean up whitespace ──────────────────────────────────────────
+	$final_content = preg_replace( '/[ \t]+/', ' ', $main_text );
+	$final_content = preg_replace( '/\n{3,}/', "\n\n", $final_content );
+	$final_content = trim( $final_content );
+	// Note: title and URL are stored as separate DB columns — do NOT prepend
+	// them to the content string. Embedding the same prefix on every chunk
+	// from a page biases cosine similarity scores.
 
 	return array(
 		'url'     => $url,

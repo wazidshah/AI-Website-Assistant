@@ -30,6 +30,12 @@ function ai_assistant_register_rest_routes() {
 					},
 					'description'       => 'The user question to answer.',
 				),
+				'history' => array(
+					'required'          => false,
+					'type'              => 'array',
+					'description'       => 'Previously sent messages to maintain conversation context.',
+					'default'           => array(),
+				),
 			),
 		)
 	);
@@ -71,6 +77,10 @@ add_action( 'rest_api_init', 'ai_assistant_register_rest_routes' );
 function ai_assistant_handle_chat( WP_REST_Request $request ) {
 	$question = $request->get_param( 'question' );
 	$question = sanitize_text_field( $question );
+	$history  = $request->get_param( 'history' );
+	if ( ! is_array( $history ) ) {
+		$history = array();
+	}
 
 	if ( empty( $question ) ) {
 		return new WP_Error(
@@ -103,11 +113,11 @@ function ai_assistant_handle_chat( WP_REST_Request $request ) {
 	}
 
 	// ── Search knowledge base ─────────────────────────────────────────────────
-	$chunks  = ai_assistant_search_chunks( $question, 5, 2000 );
+	$chunks  = ai_assistant_search_chunks( $question, 10, 20000 );
 	$context = ai_assistant_build_context( $chunks );
 
 	// ── Call Gemini ───────────────────────────────────────────────────────────
-	$answer = ai_assistant_ask_gemini( $question, $context );
+	$answer = ai_assistant_ask_gemini( $question, $context, '', $history );
 
 	if ( is_wp_error( $answer ) ) {
 		$error_code = $answer->get_error_code();

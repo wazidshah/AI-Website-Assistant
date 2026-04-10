@@ -17,12 +17,11 @@ if ( ! defined( 'ABSPATH' ) ) {
  *  2. Fallback: FULLTEXT/LIKE keyword search if API fails or embeddings don't exist yet.
  *
  * @param string $question    The user's question.
- * @param int    $top_n       Number of top chunks to return (default 5).
- * @param int    $max_context Maximum total characters across all chunks (default 2000).
- * @param int    $max_context Maximum total characters across all chunks (default 2000).
+ * @param int    $top_n       Number of top chunks to return (default 10).
+ * @param int    $max_context Maximum total characters across all chunks (default 20000).
  * @return array Array of matching chunk objects: { id, content, url, page_title }.
  */
-function ai_assistant_search_chunks( $question, $top_n = 5, $max_context = 2000 ) {
+function ai_assistant_search_chunks( $question, $top_n = 10, $max_context = 20000 ) {
 	// First try semantic search (if API working and embeddings exist).
 	$semantic_results = ai_assistant_semantic_search( $question, $top_n, $max_context );
 	
@@ -105,7 +104,10 @@ function ai_assistant_semantic_search( $question, $top_n, $max_context ) {
 	global $wpdb;
 	
 	// 1. Embed the question
-	$q_vector = ai_assistant_embed_or_null( $question );
+	// Use RETRIEVAL_QUERY for the question — Gemini embeddings are asymmetric:
+	// documents use RETRIEVAL_DOCUMENT, queries use RETRIEVAL_QUERY.
+	// Using the wrong type measurably reduces retrieval accuracy.
+	$q_vector = ai_assistant_embed_or_null( $question, 'RETRIEVAL_QUERY' );
 	if ( null === $q_vector ) {
 		return array(); // API failure, fall back to keywords.
 	}
@@ -217,7 +219,7 @@ function ai_assistant_score_results( $results, $keywords ) {
  * @param int      $max_chars  Max total characters.
  * @return object[] Chunks that fit within budget.
  */
-function ai_assistant_trim_to_context( $chunks, $max_chars = 2000 ) {
+function ai_assistant_trim_to_context( $chunks, $max_chars = 20000 ) {
 	$kept  = array();
 	$total = 0;
 

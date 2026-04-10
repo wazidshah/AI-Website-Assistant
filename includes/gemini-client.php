@@ -15,9 +15,10 @@ if ( ! defined( 'ABSPATH' ) ) {
  * @param string $question        The user's question.
  * @param string $context         Combined retrieved chunks as text.
  * @param string $model           Gemini model ID (optional, uses saved option).
+ * @param array  $history         Optional conversation history array.
  * @return string|WP_Error  Answer string or WP_Error on failure.
  */
-function ai_assistant_ask_gemini( $question, $context, $model = '' ) {
+function ai_assistant_ask_gemini( $question, $context, $model = '', $history = array() ) {
 	$api_key = get_option( 'ai_assistant_api_key', '' );
 
 	if ( empty( $api_key ) ) {
@@ -29,7 +30,7 @@ function ai_assistant_ask_gemini( $question, $context, $model = '' ) {
 	}
 
 	// ── Check response cache ─────────────────────────────────────────────────
-	$cache_key     = 'ai_assistant_' . md5( $question . $context );
+	$cache_key     = 'ai_assistant_' . md5( $question . $context . wp_json_encode( $history ) );
 	$cached_answer = get_transient( $cache_key );
 	if ( false !== $cached_answer ) {
 		return $cached_answer;
@@ -45,15 +46,28 @@ function ai_assistant_ask_gemini( $question, $context, $model = '' ) {
 		rawurlencode( $api_key )
 	);
 
+	$contents = array();
+	
+	if ( ! empty( $history ) && is_array( $history ) ) {
+		foreach ( $history as $msg ) {
+			if ( ! empty( $msg['role'] ) && ! empty( $msg['content'] ) ) {
+				$role = ( $msg['role'] === 'model' ) ? 'model' : 'user';
+				$contents[] = array(
+					'role'  => $role,
+					'parts' => array( array( 'text' => sanitize_text_field( $msg['content'] ) ) ),
+				);
+			}
+		}
+	}
+	
+	$contents[] = array(
+		'role'  => 'user',
+		'parts' => array( array( 'text' => $prompt ) ),
+	);
+
 	$body = wp_json_encode(
 		array(
-			'contents' => array(
-				array(
-					'parts' => array(
-						array( 'text' => $prompt ),
-					),
-				),
-			),
+			'contents'         => $contents,
 			'generationConfig' => array(
 				'temperature'     => 0.4,
 				'topP'            => 0.9,
@@ -123,43 +137,27 @@ function ai_assistant_ask_gemini( $question, $context, $model = '' ) {
 function ai_assistant_build_prompt( $question, $context ) {
 	$site_name = get_bloginfo( 'name' );
 
-	$system_prompt = "You are a professional customer support and sales assistant for the website '{$site_name}'. 
-You represent the company and communicate as a member of the company's team.
+	// Use the custom system prompt from settings, or fall back to the hardcoded default.
+	$saved_prompt = get_option( 'ai_assistant_system_prompt', '' );
 
-Your goal is to help visitors understand our services, products, and information available on the website.
-
-Communication style:
-- Speak as a representative of the company using words like 'we', 'our', and 'our team'
-- Be professional, polite, and helpful
-- Keep responses clear and concise
-- No emojis, slang, or jokes
-
-Accuracy rules:
-- Only provide information that is supported by the website content provided to you
-- Do not guess or invent information
-- If information is not available, politely explain that it may not be listed on the website and suggest contacting our team
-
-Conversation behavior:
-- Remember the context of the ongoing conversation.
-- Avoid repeating the same information multiple times.
-- If the user asks follow-up questions, continue the conversation naturally.
-
-Response structure guidelines:
-1. Start with a direct answer to the visitor's question
-2. Provide brief helpful context if needed
-3. When appropriate, guide the visitor to a relevant page, service, or next step
-
-Visitor guidance:
-When relevant, encourage visitors to learn more about our services, explore the website, or contact our team for additional details.
-
-Always aim to provide helpful, accurate, and professional assistance.";
+	if ( ! empty( $saved_prompt ) ) {
+		// Replace the {site_name} token with the actual site name.
+		$system_prompt = str_replace( '{site_name}', $site_name, $saved_prompt );
+	} else {
+		$system_prompt = "You are a professional AI assistant representing the website '{$site_name}'.\n\n"
+			. "Your core directives:\n"
+			. "- Answer the user's questions clearly, accurately, and directly using ONLY the provided website context.\n"
+			. "- If the user asks for specific details (like contact info, addresses, phone numbers, prices, or names), you MUST read out the exact details directly in your response. NEVER just provide a link and tell them to visit the page to find it themselves.\n"
+			. "- You may provide a link to the relevant page ONLY as supplementary reading after you have fully answered their question.\n"
+			. "- If the exact information is not available in the context below, politely say so and suggest they use the contact page.";
+	}
 
 	if ( empty( $context ) ) {
-		return $system_prompt . "Question:\n{$question}";
+		return $system_prompt . "\n\nQuestion:\n{$question}";
 	}
 
 	return $system_prompt
-		. "Context from website:\n{$context}\n\n"
+		. "\n\nContext from website:\n{$context}\n\n"
 		. "Question:\n{$question}\n\n"
 		. "Answer:";
 }

@@ -22,7 +22,7 @@ define( 'AI_ASSISTANT_EMBED_MODEL', 'gemini-embedding-001' );
  * @param bool   $use_cache Whether to use/store cached results. Default true.
  * @return float[]|WP_Error 768-element float array or WP_Error on failure.
  */
-function ai_assistant_get_embedding( $text, $use_cache = true ) {
+function ai_assistant_get_embedding( $text, $use_cache = true, $task_type = 'RETRIEVAL_DOCUMENT' ) {
 	$api_key = get_option( 'ai_assistant_api_key', '' );
 
 	if ( empty( $api_key ) ) {
@@ -36,7 +36,9 @@ function ai_assistant_get_embedding( $text, $use_cache = true ) {
 	}
 
 	// ── Transient cache ────────────────────────────────────────────────────────
-	$cache_key    = 'ai_embed_' . md5( $text );
+	// Include task_type in cache key – RETRIEVAL_QUERY and RETRIEVAL_DOCUMENT
+	// produce different vectors for the same text (asymmetric embeddings).
+	$cache_key    = 'ai_embed_' . md5( $text . $task_type );
 	$cached_embed = $use_cache ? get_transient( $cache_key ) : false;
 
 	if ( false !== $cached_embed ) {
@@ -59,7 +61,7 @@ function ai_assistant_get_embedding( $text, $use_cache = true ) {
 					array( 'text' => $text ),
 				),
 			),
-			'taskType' => 'RETRIEVAL_DOCUMENT', // Optimise for document retrieval.
+			'taskType' => $task_type,
 		)
 	);
 
@@ -148,8 +150,8 @@ function ai_assistant_cosine_similarity( array $a, array $b ) {
  * @param string $text Text to embed.
  * @return float[]|null Vector or null on failure.
  */
-function ai_assistant_embed_or_null( $text ) {
-	$result = ai_assistant_get_embedding( $text, true );
+function ai_assistant_embed_or_null( $text, $task_type = 'RETRIEVAL_DOCUMENT' ) {
+	$result = ai_assistant_get_embedding( $text, true, $task_type );
 	if ( is_wp_error( $result ) ) {
 		return null;
 	}

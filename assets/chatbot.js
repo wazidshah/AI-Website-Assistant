@@ -14,6 +14,8 @@
 	var NONCE     = cfg.nonce    || '';
 	var BOT_NAME  = cfg.botName  || 'AI Assistant';
 	var GREETING  = cfg.greeting || 'Hi! How can I help you today?';
+	var BOT_PIC   = cfg.botPic   || '';
+	var NO_BRAND  = cfg.removeBranding || false;
 
 	/* ── Build HTML ─────────────────────────────────────────────────────── */
 	var widgetHTML = [
@@ -25,7 +27,7 @@
 		'<div id="ai-assistant-widget" role="dialog" aria-label="AI Assistant Chat" aria-modal="true">',
 
 		'  <div id="ai-assistant-header">',
-		'    <div class="ai-avatar">🤖</div>',
+		'    <div class="ai-avatar">' + (BOT_PIC ? '<img src="' + escapeHtml(BOT_PIC) + '" alt="' + escapeHtml(BOT_NAME) + '">' : '🤖') + '</div>',
 		'    <div class="ai-header-info">',
 		'      <div class="ai-header-name" id="ai-bot-name"></div>',
 		'      <div class="ai-header-status"><span class="ai-status-dot"></span>Online</div>',
@@ -57,7 +59,7 @@
 		'    </button>',
 		'  </div>',
 
-		'  <div class="ai-powered">Powered by Google Gemini</div>',
+		(NO_BRAND ? '' : '  <div class="ai-powered">Powered by Google Gemini</div>'),
 		'</div>',
 	].join('\n');
 
@@ -83,6 +85,7 @@
 	var isOpen    = false;
 	var isBusy    = false;
 	var sessionId = 'ai_session_' + Date.now();
+	var chatHistory = []; // Stores the last ~5 messages for context
 
 	/* ── Helpers ─────────────────────────────────────────────────────────── */
 	function escapeHtml(str) {
@@ -190,8 +193,20 @@
 		var question = input.value.trim();
 		if (!question || isBusy) { return; }
 
+		// Remove helper suggestions if the user types a custom message
+		var existingHelpers = document.querySelector('.ai-helper-questions');
+		if (existingHelpers) {
+			existingHelpers.remove();
+		}
+
 		// Show user bubble.
 		appendMessage('user', question);
+
+		// Prepare history payload (send max 5 messages to save tokens).
+		var historyPayload = chatHistory.slice(-5);
+
+		// Store user message in local history.
+		chatHistory.push({ role: 'user', content: question });
 
 		input.value = '';
 		input.style.height = 'auto';
@@ -204,7 +219,10 @@
 				'Content-Type': 'application/json',
 				'X-WP-Nonce':   NONCE,
 			},
-			body: JSON.stringify({ question: question }),
+			body: JSON.stringify({ 
+				question: question,
+				history: historyPayload
+			}),
 		})
 		.then(function(response) {
 			return response.json().then(function(data) {
@@ -217,6 +235,8 @@
 
 			if (result.status === 200 && result.data.answer) {
 				appendMessage('bot', result.data.answer, result.data.sources || []);
+				// Store bot response in history
+				chatHistory.push({ role: 'model', content: result.data.answer });
 			} else {
 				var errMsg = (result.data && result.data.message)
 					? result.data.message
@@ -249,7 +269,28 @@
 		}
 	});
 
-	/* ── Greeting ─────────────────────────────────────────────────────────── */
+	/* ── Greeting & Suggestions ──────────────────────────────────────────── */
 	appendMessage('bot', GREETING);
+
+	var SUGGESTIONS = cfg.helperQuestions || [];
+	if (SUGGESTIONS.length > 0) {
+		var suggBlock = document.createElement('div');
+		suggBlock.className = 'ai-helper-questions';
+
+		SUGGESTIONS.forEach(function(q) {
+			var btn = document.createElement('button');
+			btn.className = 'ai-helper-btn';
+			btn.textContent = q;
+			btn.addEventListener('click', function() {
+				suggBlock.remove(); // Remove suggestions on click
+				input.value = q;
+				sendMessage();
+			});
+			suggBlock.appendChild(btn);
+		});
+
+		messages.insertBefore(suggBlock, typing);
+		scrollToBottom();
+	}
 
 })();

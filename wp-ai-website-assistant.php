@@ -4,7 +4,7 @@
  * Plugin URI:  https://example.com/ai-website-assistant
  * Description: A lightweight AI chatbot powered by Google Gemini that answers questions about your website content using RAG (Retrieval Augmented Generation).
  * Version:     1.0.0
- * Author:      Your Name
+ * Author:      Wazid Shah
  * License:     GPL-2.0+
  * License URI: https://www.gnu.org/licenses/gpl-2.0.html
  * Text Domain: ai-website-assistant
@@ -102,6 +102,11 @@ function ai_assistant_enqueue_frontend_assets() {
 		return;
 	}
 
+	// Admin-only mode: hide chatbot from non-admins when the setting is enabled.
+	if ( get_option( 'ai_assistant_admin_only', 0 ) && ! current_user_can( 'manage_options' ) ) {
+		return;
+	}
+
 	wp_enqueue_style(
 		'ai-assistant-chatbot',
 		AI_ASSISTANT_PLUGIN_URL . 'assets/chatbot.css',
@@ -117,15 +122,38 @@ function ai_assistant_enqueue_frontend_assets() {
 		true // Load in footer.
 	);
 
-	// Pass REST URL and nonce to JS.
+	// Fetch appearance settings
+	$font  = esc_html( get_option( 'ai_assistant_font', '' ) );
+	$color = esc_attr( get_option( 'ai_assistant_color', '#4f46e5' ) );
+	
+	$questions_raw = get_option( 'ai_assistant_helper_questions', '' );
+	$questions = array_filter( array_map( 'trim', explode( "\n", $questions_raw ) ) );
+
+	// Add inline CSS variables for the color and font to override defaults in chatbot.css.
+	$inline_css = ':root { ';
+	if ( ! empty( $color ) ) {
+		// Provide a generic darker/lighter state based on the primary color for buttons
+		$inline_css .= '--ai-primary: ' . $color . '; ';
+		$inline_css .= '--ai-primary-border: ' . $color . '; ';
+	}
+	if ( ! empty( $font ) ) {
+		$inline_css .= '--ai-font: ' . $font . '; ';
+	}
+	$inline_css .= '}';
+	wp_add_inline_style( 'ai-assistant-chatbot', $inline_css );
+
+	// Pass REST URL, nonce, and all visual config payload to JS.
 	wp_localize_script(
 		'ai-assistant-chatbot',
 		'aiAssistantConfig',
 		array(
-			'restUrl'   => esc_url_raw( rest_url( 'ai-assistant/v1/chat' ) ),
-			'nonce'     => wp_create_nonce( 'wp_rest' ),
-			'botName'   => esc_html( get_option( 'ai_assistant_bot_name', 'AI Assistant' ) ),
-			'greeting'  => esc_html( get_option( 'ai_assistant_greeting', 'Hi! How can I help you today?' ) ),
+			'restUrl'        => esc_url_raw( rest_url( 'ai-assistant/v1/chat' ) ),
+			'nonce'          => wp_create_nonce( 'wp_rest' ),
+			'botName'        => esc_html( get_option( 'ai_assistant_bot_name', 'AI Assistant' ) ),
+			'greeting'       => esc_html( get_option( 'ai_assistant_greeting', 'Hi! How can I help you today?' ) ),
+			'botPic'         => esc_url_raw( get_option( 'ai_assistant_bot_pic', '' ) ),
+			'removeBranding' => (bool) get_option( 'ai_assistant_remove_branding', 0 ),
+			'helperQuestions'=> array_values( $questions ),
 		)
 	);
 }

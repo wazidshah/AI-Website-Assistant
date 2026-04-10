@@ -34,6 +34,13 @@ function ai_assistant_register_settings() {
 		'default'           => '',
 	) );
 
+	// System Prompt.
+	register_setting( 'ai_assistant_settings', 'ai_assistant_system_prompt', array(
+		'type'              => 'string',
+		'sanitize_callback' => 'sanitize_textarea_field',
+		'default'           => '',
+	) );
+
 	// Model.
 	register_setting( 'ai_assistant_settings', 'ai_assistant_model', array(
 		'type'              => 'string',
@@ -53,6 +60,20 @@ function ai_assistant_register_settings() {
 		'type'              => 'string',
 		'sanitize_callback' => 'sanitize_text_field',
 		'default'           => 'Hi! How can I help you today?',
+	) );
+
+	// Helper Questions.
+	register_setting( 'ai_assistant_settings', 'ai_assistant_helper_questions', array(
+		'type'              => 'string',
+		'sanitize_callback' => 'sanitize_textarea_field',
+		'default'           => '',
+	) );
+
+	// Admin-only mode (show chatbot to admins only).
+	register_setting( 'ai_assistant_settings', 'ai_assistant_admin_only', array(
+		'type'              => 'integer',
+		'sanitize_callback' => 'absint',
+		'default'           => 0,
 	) );
 
 	// Rate limit.
@@ -111,6 +132,28 @@ function ai_assistant_register_settings() {
 		'default'           => "/cart/\n/checkout/\n/account/\n/wp-admin/",
 	) );
 
+	// Appearance Settings.
+	register_setting( 'ai_assistant_settings', 'ai_assistant_color', array(
+		'type'              => 'string',
+		'sanitize_callback' => 'sanitize_hex_color',
+		'default'           => '#4f46e5',
+	) );
+	register_setting( 'ai_assistant_settings', 'ai_assistant_font', array(
+		'type'              => 'string',
+		'sanitize_callback' => 'sanitize_text_field',
+		'default'           => '',
+	) );
+	register_setting( 'ai_assistant_settings', 'ai_assistant_bot_pic', array(
+		'type'              => 'string',
+		'sanitize_callback' => 'esc_url_raw',
+		'default'           => '',
+	) );
+	register_setting( 'ai_assistant_settings', 'ai_assistant_remove_branding', array(
+		'type'              => 'integer',
+		'sanitize_callback' => 'absint',
+		'default'           => 0,
+	) );
+
 	// --- Sections ---
 	add_settings_section(
 		'ai_assistant_api_section',
@@ -133,11 +176,26 @@ function ai_assistant_register_settings() {
 		'ai-assistant-settings'
 	);
 
+	add_settings_section(
+		'ai_assistant_appearance_section',
+		__( 'Appearance & Customization', 'ai-website-assistant' ),
+		'__return_false',
+		'ai-assistant-settings'
+	);
+
 	// --- Fields ---
 	add_settings_field(
 		'ai_assistant_api_key',
 		__( 'Google Gemini API Key', 'ai-website-assistant' ),
 		'ai_assistant_field_api_key',
+		'ai-assistant-settings',
+		'ai_assistant_api_section'
+	);
+
+	add_settings_field(
+		'ai_assistant_system_prompt',
+		__( 'System Prompt', 'ai-website-assistant' ),
+		'ai_assistant_field_system_prompt',
 		'ai-assistant-settings',
 		'ai_assistant_api_section'
 	);
@@ -175,6 +233,22 @@ function ai_assistant_register_settings() {
 	);
 
 	add_settings_field(
+		'ai_assistant_helper_questions',
+		__( 'Suggested Questions (Quick Replies)', 'ai-website-assistant' ),
+		'ai_assistant_field_helper_questions',
+		'ai-assistant-settings',
+		'ai_assistant_widget_section'
+	);
+
+	add_settings_field(
+		'ai_assistant_admin_only',
+		__( 'Admin-Only Mode', 'ai-website-assistant' ),
+		'ai_assistant_field_admin_only',
+		'ai-assistant-settings',
+		'ai_assistant_widget_section'
+	);
+
+	add_settings_field(
 		'ai_assistant_index_acf',
 		__( 'Advance Custom Fields (ACF)', 'ai-website-assistant' ),
 		'ai_assistant_field_index_acf',
@@ -205,6 +279,38 @@ function ai_assistant_register_settings() {
 		'ai-assistant-settings',
 		'ai_assistant_indexing_section'
 	);
+
+	add_settings_field(
+		'ai_assistant_color',
+		__( 'Primary Color', 'ai-website-assistant' ),
+		'ai_assistant_field_color',
+		'ai-assistant-settings',
+		'ai_assistant_appearance_section'
+	);
+
+	add_settings_field(
+		'ai_assistant_font',
+		__( 'Custom Font Family', 'ai-website-assistant' ),
+		'ai_assistant_field_font',
+		'ai-assistant-settings',
+		'ai_assistant_appearance_section'
+	);
+
+	add_settings_field(
+		'ai_assistant_bot_pic',
+		__( 'Bot Profile Picture URL', 'ai-website-assistant' ),
+		'ai_assistant_field_bot_pic',
+		'ai-assistant-settings',
+		'ai_assistant_appearance_section'
+	);
+
+	add_settings_field(
+		'ai_assistant_remove_branding',
+		__( 'Remove "Powered by Gemini"', 'ai-website-assistant' ),
+		'ai_assistant_field_remove_branding',
+		'ai-assistant-settings',
+		'ai_assistant_appearance_section'
+	);
 }
 add_action( 'admin_init', 'ai_assistant_register_settings' );
 
@@ -218,6 +324,24 @@ function ai_assistant_field_api_key() {
 		__( 'Get your API key from <a href="%s" target="_blank" rel="noopener">Google AI Studio</a>.', 'ai-website-assistant' ),
 		'https://aistudio.google.com/app/apikey'
 	) ) . '</p>';
+}
+
+function ai_assistant_field_system_prompt() {
+	$default = "You are a professional AI assistant representing the website '{site_name}'.\n\n"
+		. "Your core directives:\n"
+		. "- Answer the user's questions clearly, accurately, and directly using ONLY the provided website context.\n"
+		. "- If the user asks for specific details (like contact info, addresses, phone numbers, prices, or names), you MUST read out the exact details directly in your response. NEVER just provide a link and tell them to visit the page to find it themselves.\n"
+		. "- You may provide a link to the relevant page ONLY as supplementary reading after you have fully answered their question.\n"
+		. "- If the exact information is not available in the context below, politely say so and suggest they use the contact page.";
+
+	$val = get_option( 'ai_assistant_system_prompt', '' );
+	$display = esc_textarea( $val !== '' ? $val : $default );
+	echo '<textarea id="ai_assistant_system_prompt" name="ai_assistant_system_prompt" rows="10" cols="80" class="large-text code">' . $display . '</textarea>';
+	echo '<p class="description">';
+	echo esc_html__( 'Instructions that define the AI\'s personality and behaviour. Leave blank to use the built-in default.', 'ai-website-assistant' ) . '<br>';
+	echo '<strong>' . esc_html__( 'Available tokens:', 'ai-website-assistant' ) . '</strong> ';
+	echo '<code>{site_name}</code> — ' . esc_html__( 'replaced with your WordPress site name at runtime.', 'ai-website-assistant' );
+	echo '</p>';
 }
 
 function ai_assistant_field_model() {
@@ -310,6 +434,18 @@ function ai_assistant_field_greeting() {
 	echo '<p class="description">' . esc_html__( 'First message shown when the chat opens.', 'ai-website-assistant' ) . '</p>';
 }
 
+function ai_assistant_field_helper_questions() {
+	$val = esc_textarea( get_option( 'ai_assistant_helper_questions', '' ) );
+	echo '<textarea id="ai_assistant_helper_questions" name="ai_assistant_helper_questions" rows="3" cols="50" class="large-text code">' . $val . '</textarea>';
+	echo '<p class="description">' . esc_html__( 'Clickable suggested questions to show the user (Enter one question per line). Leave blank to disable.', 'ai-website-assistant' ) . '</p>';
+}
+
+function ai_assistant_field_admin_only() {
+	$val = get_option( 'ai_assistant_admin_only', 0 );
+	echo '<label><input type="checkbox" name="ai_assistant_admin_only" value="1" ' . checked( 1, $val, false ) . ' /> ' . esc_html__( 'Show chatbot only to logged-in administrators (useful for testing before going live).', 'ai-website-assistant' ) . '</label>';
+	echo '<p class="description">' . esc_html__( 'When enabled, the chat widget will be hidden from regular visitors and only visible to admins.', 'ai-website-assistant' ) . '</p>';
+}
+
 function ai_assistant_field_index_acf() {
 	$val = get_option( 'ai_assistant_index_acf', 0 );
 	echo '<label><input type="checkbox" name="ai_assistant_index_acf" value="1" ' . checked( 1, $val, false ) . ' /> ' . esc_html__( 'Enable checking Advanced Custom Fields (ACF/ACF Pro) content when scanning the website.', 'ai-website-assistant' ) . '</label>';
@@ -341,6 +477,29 @@ function ai_assistant_field_exclude_patterns() {
 	$val = esc_textarea( get_option( 'ai_assistant_exclude_patterns', "/cart/\n/checkout/\n/account/\n/wp-admin/" ) );
 	echo '<textarea id="ai_assistant_exclude_patterns" name="ai_assistant_exclude_patterns" rows="4" cols="50" class="large-text code">' . $val . '</textarea>';
 	echo '<p class="description">' . esc_html__( 'Do not crawl URLs containing these exact strings (one per line). Overrides include rules.', 'ai-website-assistant' ) . '</p>';
+}
+
+function ai_assistant_field_color() {
+	$val = esc_attr( get_option( 'ai_assistant_color', '#4f46e5' ) );
+	echo '<input type="color" id="ai_assistant_color" name="ai_assistant_color" value="' . $val . '" />';
+	echo '<p class="description">' . esc_html__( 'Main color for the chat bubble and buttons.', 'ai-website-assistant' ) . '</p>';
+}
+
+function ai_assistant_field_font() {
+	$val = esc_attr( get_option( 'ai_assistant_font', '' ) );
+	echo '<input type="text" id="ai_assistant_font" name="ai_assistant_font" value="' . $val . '" class="regular-text" placeholder="e.g. Montserrat, sans-serif" />';
+	echo '<p class="description">' . esc_html__( 'Custom CSS font-family string. Leave blank to use default system fonts.', 'ai-website-assistant' ) . '</p>';
+}
+
+function ai_assistant_field_bot_pic() {
+	$val = esc_url( get_option( 'ai_assistant_bot_pic', '' ) );
+	echo '<input type="url" id="ai_assistant_bot_pic" name="ai_assistant_bot_pic" value="' . $val . '" class="regular-text" placeholder="https://..." />';
+	echo '<p class="description">' . esc_html__( 'Direct URL to a square image (e.g. your logo). Leave blank for the default robot emoji.', 'ai-website-assistant' ) . '</p>';
+}
+
+function ai_assistant_field_remove_branding() {
+	$val = get_option( 'ai_assistant_remove_branding', 0 );
+	echo '<label><input type="checkbox" name="ai_assistant_remove_branding" value="1" ' . checked( 1, $val, false ) . ' /> ' . esc_html__( 'Hide the "Powered by Google Gemini" footer badge.', 'ai-website-assistant' ) . '</label>';
 }
 
 // ── Main Settings Page Renderer ──────────────────────────────────────────────
