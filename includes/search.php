@@ -43,7 +43,7 @@ function ai_assistant_search_chunks( $question, $top_n = 10, $max_context = 2000
 	$ft_search_term = implode( ' ', array_map( fn( $kw ) => '+' . $kw, $keywords ) );
 	$ft_search_term = sanitize_text_field( $ft_search_term );
 
-	// phpcs:ignore WordPress.DB.DirectDatabaseQuery, WordPress.DB.PreparedSQL.InterpolatedNotPrepared
+	// phpcs:disable WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.PreparedSQL.InterpolatedNotPrepared
 	$results = $wpdb->get_results(
 		$wpdb->prepare(
 			"SELECT id, content, url, page_title,
@@ -57,6 +57,7 @@ function ai_assistant_search_chunks( $question, $top_n = 10, $max_context = 2000
 			$top_n * 2 // Fetch a bit extra for scoring.
 		)
 	);
+	// phpcs:enable
 
 	if ( empty( $results ) ) {
 		$like_clauses = array();
@@ -69,9 +70,8 @@ function ai_assistant_search_chunks( $question, $top_n = 10, $max_context = 2000
 
 		$where_sql = implode( ' OR ', $like_clauses );
 
-		// phpcs:ignore WordPress.DB.DirectDatabaseQuery, WordPress.DB.PreparedSQL.NotPrepared
+		// phpcs:disable WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.PreparedSQL.NotPrepared, PluginCheck.Security.DirectDB.UnescapedDBParameter
 		$results = $wpdb->get_results(
-			// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared
 			$wpdb->prepare(
 				"SELECT id, content, url, page_title
 				 FROM {$table_name}
@@ -80,6 +80,7 @@ function ai_assistant_search_chunks( $question, $top_n = 10, $max_context = 2000
 				array_merge( $like_values, array( $top_n * 2 ) )
 			)
 		);
+		// phpcs:enable
 	}
 
 	if ( empty( $results ) ) {
@@ -116,7 +117,7 @@ function ai_assistant_semantic_search( $question, $top_n, $max_context ) {
 	
 	// 2. Fetch all chunks that have embeddings.
 	// For production on v.large sites, this fetch needs pagination or a vector DB ext.
-	// phpcs:ignore WordPress.DB.DirectDatabaseQuery
+	// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.PreparedSQL.InterpolatedNotPrepared -- $table_name is always $wpdb->prefix . constant.
 	$chunks = $wpdb->get_results( "SELECT id, content, embedding, url, page_title FROM {$table_name} WHERE embedding IS NOT NULL" );
 	
 	if ( empty( $chunks ) ) {

@@ -175,9 +175,8 @@ function ai_assistant_handle_chat( WP_REST_Request $request ) {
  * @return WP_REST_Response
  */
 function ai_assistant_handle_training( WP_REST_Request $request ) {
-	if ( ! ini_get( 'safe_mode' ) ) {
-		set_time_limit( 300 );
-	}
+	// phpcs:ignore Squiz.PHP.DiscouragedFunctions.Discouraged -- Training requests may process many pages; extended execution time is required.
+	set_time_limit( 300 );
 
 	$action = $request->get_param( 'action' );
 	

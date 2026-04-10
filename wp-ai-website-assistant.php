@@ -1,7 +1,7 @@
 <?php
 /**
- * Plugin Name: AI Website Assistant
- * Plugin URI:  https://example.com/ai-website-assistant
+ * Plugin Name: AI Website Assistant – Smart Chat for WordPress
+ * Plugin URI:  https://wazidshah.github.io/AI-Website-Assistant/
  * Description: A lightweight AI chatbot powered by Google Gemini that answers questions about your website content using RAG (Retrieval Augmented Generation).
  * Version:     1.0.0
  * Author:      Wazid Shah

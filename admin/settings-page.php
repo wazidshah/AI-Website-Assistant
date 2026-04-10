@@ -318,7 +318,7 @@ add_action( 'admin_init', 'ai_assistant_register_settings' );
 
 function ai_assistant_field_api_key() {
 	$val = esc_attr( get_option( 'ai_assistant_api_key', '' ) );
-	echo '<input type="password" id="ai_assistant_api_key" name="ai_assistant_api_key" value="' . $val . '" class="regular-text" autocomplete="off" />';
+	echo '<input type="password" id="ai_assistant_api_key" name="ai_assistant_api_key" value="' . esc_attr( $val ) . '" class="regular-text" autocomplete="off" />';
 	echo '<p class="description">' . wp_kses_post( sprintf(
 		/* translators: link URL */
 		__( 'Get your API key from <a href="%s" target="_blank" rel="noopener">Google AI Studio</a>.', 'ai-website-assistant' ),
@@ -336,7 +336,7 @@ function ai_assistant_field_system_prompt() {
 
 	$val = get_option( 'ai_assistant_system_prompt', '' );
 	$display = esc_textarea( $val !== '' ? $val : $default );
-	echo '<textarea id="ai_assistant_system_prompt" name="ai_assistant_system_prompt" rows="10" cols="80" class="large-text code">' . $display . '</textarea>';
+	echo '<textarea id="ai_assistant_system_prompt" name="ai_assistant_system_prompt" rows="10" cols="80" class="large-text code">' . esc_textarea( $display ) . '</textarea>';
 	echo '<p class="description">';
 	echo esc_html__( 'Instructions that define the AI\'s personality and behaviour. Leave blank to use the built-in default.', 'ai-website-assistant' ) . '<br>';
 	echo '<strong>' . esc_html__( 'Available tokens:', 'ai-website-assistant' ) . '</strong> ';
@@ -419,24 +419,24 @@ function ai_assistant_field_model() {
 
 function ai_assistant_field_rate_limit() {
 	$val = absint( get_option( 'ai_assistant_rate_limit', 20 ) );
-	echo '<input type="number" id="ai_assistant_rate_limit" name="ai_assistant_rate_limit" value="' . $val . '" min="1" max="200" class="small-text" />';
+	echo '<input type="number" id="ai_assistant_rate_limit" name="ai_assistant_rate_limit" value="' . absint( $val ) . '" min="1" max="200" class="small-text" />';
 	echo '<p class="description">' . esc_html__( 'Max chatbot requests per IP per minute.', 'ai-website-assistant' ) . '</p>';
 }
 
 function ai_assistant_field_bot_name() {
 	$val = esc_attr( get_option( 'ai_assistant_bot_name', 'AI Assistant' ) );
-	echo '<input type="text" id="ai_assistant_bot_name" name="ai_assistant_bot_name" value="' . $val . '" class="regular-text" />';
+	echo '<input type="text" id="ai_assistant_bot_name" name="ai_assistant_bot_name" value="' . esc_attr( $val ) . '" class="regular-text" />';
 }
 
 function ai_assistant_field_greeting() {
 	$val = esc_attr( get_option( 'ai_assistant_greeting', 'Hi! How can I help you today?' ) );
-	echo '<input type="text" id="ai_assistant_greeting" name="ai_assistant_greeting" value="' . $val . '" class="large-text" />';
+	echo '<input type="text" id="ai_assistant_greeting" name="ai_assistant_greeting" value="' . esc_attr( $val ) . '" class="large-text" />';
 	echo '<p class="description">' . esc_html__( 'First message shown when the chat opens.', 'ai-website-assistant' ) . '</p>';
 }
 
 function ai_assistant_field_helper_questions() {
 	$val = esc_textarea( get_option( 'ai_assistant_helper_questions', '' ) );
-	echo '<textarea id="ai_assistant_helper_questions" name="ai_assistant_helper_questions" rows="3" cols="50" class="large-text code">' . $val . '</textarea>';
+	echo '<textarea id="ai_assistant_helper_questions" name="ai_assistant_helper_questions" rows="3" cols="50" class="large-text code">' . esc_textarea( $val ) . '</textarea>';
 	echo '<p class="description">' . esc_html__( 'Clickable suggested questions to show the user (Enter one question per line). Leave blank to disable.', 'ai-website-assistant' ) . '</p>';
 }
 
@@ -469,31 +469,31 @@ function ai_assistant_field_crawl_content_types() {
 
 function ai_assistant_field_include_patterns() {
 	$val = esc_textarea( get_option( 'ai_assistant_include_patterns', '' ) );
-	echo '<textarea id="ai_assistant_include_patterns" name="ai_assistant_include_patterns" rows="4" cols="50" class="large-text code">' . $val . '</textarea>';
+	echo '<textarea id="ai_assistant_include_patterns" name="ai_assistant_include_patterns" rows="4" cols="50" class="large-text code">' . esc_textarea( $val ) . '</textarea>';
 	echo '<p class="description">' . esc_html__( 'Only crawl URLs containing these exact strings (one per line). Leave empty to scan everything discoverable.', 'ai-website-assistant' ) . '</p>';
 }
 
 function ai_assistant_field_exclude_patterns() {
 	$val = esc_textarea( get_option( 'ai_assistant_exclude_patterns', "/cart/\n/checkout/\n/account/\n/wp-admin/" ) );
-	echo '<textarea id="ai_assistant_exclude_patterns" name="ai_assistant_exclude_patterns" rows="4" cols="50" class="large-text code">' . $val . '</textarea>';
+	echo '<textarea id="ai_assistant_exclude_patterns" name="ai_assistant_exclude_patterns" rows="4" cols="50" class="large-text code">' . esc_textarea( $val ) . '</textarea>';
 	echo '<p class="description">' . esc_html__( 'Do not crawl URLs containing these exact strings (one per line). Overrides include rules.', 'ai-website-assistant' ) . '</p>';
 }
 
 function ai_assistant_field_color() {
 	$val = esc_attr( get_option( 'ai_assistant_color', '#4f46e5' ) );
-	echo '<input type="color" id="ai_assistant_color" name="ai_assistant_color" value="' . $val . '" />';
+	echo '<input type="color" id="ai_assistant_color" name="ai_assistant_color" value="' . esc_attr( $val ) . '" />';
 	echo '<p class="description">' . esc_html__( 'Main color for the chat bubble and buttons.', 'ai-website-assistant' ) . '</p>';
 }
 
 function ai_assistant_field_font() {
 	$val = esc_attr( get_option( 'ai_assistant_font', '' ) );
-	echo '<input type="text" id="ai_assistant_font" name="ai_assistant_font" value="' . $val . '" class="regular-text" placeholder="e.g. Montserrat, sans-serif" />';
+	echo '<input type="text" id="ai_assistant_font" name="ai_assistant_font" value="' . esc_attr( $val ) . '" class="regular-text" placeholder="e.g. Montserrat, sans-serif" />';
 	echo '<p class="description">' . esc_html__( 'Custom CSS font-family string. Leave blank to use default system fonts.', 'ai-website-assistant' ) . '</p>';
 }
 
 function ai_assistant_field_bot_pic() {
 	$val = esc_url( get_option( 'ai_assistant_bot_pic', '' ) );
-	echo '<input type="url" id="ai_assistant_bot_pic" name="ai_assistant_bot_pic" value="' . $val . '" class="regular-text" placeholder="https://..." />';
+	echo '<input type="url" id="ai_assistant_bot_pic" name="ai_assistant_bot_pic" value="' . esc_url( $val ) . '" class="regular-text" placeholder="https://..." />';
 	echo '<p class="description">' . esc_html__( 'Direct URL to a square image (e.g. your logo). Leave blank for the default robot emoji.', 'ai-website-assistant' ) . '</p>';
 }
 

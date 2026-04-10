@@ -77,7 +77,7 @@ function ai_assistant_find_sentence_break( $text ) {
 function ai_assistant_clear_training_data() {
 	global $wpdb;
 	$table_name = $wpdb->prefix . AI_ASSISTANT_TABLE;
-	// phpcs:ignore WordPress.DB.DirectDatabaseQuery
+	// phpcs:ignore WordPress.DB.DirectDatabaseQuery.SchemaChange, WordPress.DB.PreparedSQL.InterpolatedNotPrepared -- TRUNCATE does not support placeholders; table name is always $wpdb->prefix . constant.
 	$wpdb->query( "TRUNCATE TABLE {$table_name}" );
 	update_option( 'ai_assistant_chunk_count', 0 );
 }
